@@ -5,52 +5,47 @@ import time
 import requests
 
 
-
-
 class V3Pools:
-    def __init__(self, fromBlock, toBlock, dex="uniswap"):
+    def __init__(self, fromBlock, toBlock, chain="avalanche", dex="traderjoe"):
         self.config = json.load(open("config.json"))
-        self.provider = Web3(Web3.WebsocketProvider(self.config["wss"]))
+        self.provider = Web3(Web3.HTTPProvider(self.config["http"]))
         self.fromBlock = fromBlock
         self.toBlock = toBlock
-        if dex == "uniswap":
-            self.contractFactory = self.provider.eth.contract(address=self.config["factoryAddress"],abi=json.load(open("./abis/factories/UniV3FactoryABI.json")))
-            self.contractPool = self.provider.eth.contract(address=self.config["poolAddress"],abi=json.load(open("./abis/pools/UniV3PoolABI.json")))
-        elif dex == "traderjoe":
-            self.contractFactory = self.provider.eth.contract(address=self.config["factoryAddress"],abi=json.load(open("./abis/factories/TJoeV3FactoryABI.json")))
-            self.contractPool = self.provider.eth.contract(address=self.config["poolAddress"],abi=json.load(open("./abis/pools/TJoeV3PoolABI.json")))
+        self.addresses = json.load(open("addresses.json"))
+        self.contractFactory = self.provider.eth.contract(address=self.addresses[chain][dex]["factoryAddress"],abi=json.load(open(f"./abis/{dex}/V3FactoryABI.json")))
+        self.contractPool = self.provider.eth.contract(address=self.addresses[chain][dex]["poolAddress"],abi=json.load(open(f"./abis/{dex}/V3PoolABI.json")))
 
-    async def log_loop_pool_creation(self,event_filter, poll_interval):
+
+    def log_loop_pool_creation(self, event_filter):
         for poolCreated in event_filter.get_all_entries():
             self.handle_event_pool_creation(poolCreated)
-            
-        await asyncio.sleep(poll_interval)
-
 
     def handle_event_pool_creation(self,event):
         print("====================================")
         eventData = event.args
         print(eventData)
-        
+
 
     def fetch_created_pool(self):
         event_filter =  self.contractFactory.events.LBPairCreated.create_filter(fromBlock=self.fromBlock, toBlock=self.toBlock)
-        loop = asyncio.get_event_loop()
         try:
-            print("Starting fetch created pools")
-            loop.run_until_complete(
-                asyncio.gather(
-                    self.log_loop_pool_creation(event_filter, 0.2)
-                    )
-                )
-        finally:
-                # close loop to free up system resources
-            loop.close()
+            print(f"Starting fetch created pools: {self.fromBlock} to {self.toBlock}")
+            self.log_loop_pool_creation(event_filter)
+        except Exception as e:
+            print(f"Error: {e}")
 
     def main(self):
         self.fetch_created_pool()
 
 
 
-v3pools = V3Pools(fromBlock=42727000, toBlock=42728000, dex="traderjoe")
-v3pools.main()
+fromBlock = 42700000
+toBlock = 42728000
+
+
+while fromBlock+2000 <= toBlock:
+    v3pools = V3Pools(fromBlock=fromBlock, toBlock=fromBlock+2000, dex="traderjoe")
+    v3pools.main()
+    
+    time.sleep(.2)
+    fromBlock+=2000

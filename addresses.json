@@ -1,0 +1,8 @@
+{
+    "avalanche": {
+        "traderjoe": {
+            "poolAddress" : "0x693B37a9859Ce9465Fb2aAdeB03811a26A0c37C0",
+            "factoryAddress" : "0x8e42f2F4101563bF679975178e880FD87d3eFd4e"
+        }
+    }
+}
